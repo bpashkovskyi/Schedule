@@ -354,6 +354,34 @@ $(document).ready(function() {
             e.preventDefault();
             searchTeachingLoad();
         });
+
+        // View toggles for all tabs
+        $('input[name="teachersViewToggle"]').on('change', function() {
+            const isWeeklyView = $('#teachersWeeklyToggle').is(':checked');
+            toggleWeeklyViewClass(isWeeklyView);
+            if (isWeeklyView && $('#teachersScheduleCard').is(':visible')) {
+                // Re-fetch data with weekly view
+                searchTeachersSchedule();
+            }
+        });
+
+        $('input[name="roomsViewToggle"]').on('change', function() {
+            const isWeeklyView = $('#roomsWeeklyToggle').is(':checked');
+            toggleWeeklyViewClass(isWeeklyView);
+            if (isWeeklyView && $('#roomsScheduleCard').is(':visible')) {
+                // Re-fetch data with weekly view
+                searchRoomsSchedule();
+            }
+        });
+
+        $('input[name="groupsViewToggle"]').on('change', function() {
+            const isWeeklyView = $('#groupsWeeklyToggle').is(':checked');
+            toggleWeeklyViewClass(isWeeklyView);
+            if (isWeeklyView && $('#groupsScheduleCard').is(':visible')) {
+                // Re-fetch data with weekly view
+                searchGroupsSchedule();
+            }
+        });
     }
 
     function populateRooms(blockName) {
@@ -600,6 +628,7 @@ $(document).ready(function() {
         const roomId = $('#selectedRoom').val();
         const fromDate = $('#fromDate').val();
         const toDate = $('#toDate').val();
+        const isWeeklyView = $('#roomsWeeklyToggle').is(':checked');
 
         if (!roomId || !fromDate || !toDate) {
             showError('Необхідно заповнити всі поля');
@@ -632,7 +661,13 @@ $(document).ready(function() {
                     return;
                 }
                 
-                displayRoomsSchedule(data, roomId);
+                if (isWeeklyView) {
+                    toggleWeeklyViewClass(true);
+                    displayWeeklySchedule(data, roomId, 'room');
+                } else {
+                    toggleWeeklyViewClass(false);
+                    displayRoomsSchedule(data, roomId);
+                }
                 showLoading(false, 'rooms');
             },
             error: function(xhr, status, error) {
@@ -648,6 +683,7 @@ $(document).ready(function() {
         const teacherId = $('#selectedTeacher').val();
         const fromDate = $('#teachersFromDate').val();
         const toDate = $('#teachersToDate').val();
+        const isWeeklyView = $('#teachersWeeklyToggle').is(':checked');
 
         if (!teacherId || !fromDate || !toDate) {
             showError('Необхідно заповнити всі поля');
@@ -656,7 +692,7 @@ $(document).ready(function() {
 
         showLoading(true, 'teachers');
 
-        // Convert HTML date format (yyyy-MM-dd) to API format (dd.MM.yyyy)
+        // Always use the proxy endpoint
         const fromDateAPI = convertDateForAPI(fromDate);
         const toDateAPI = convertDateForAPI(toDate);
 
@@ -680,7 +716,13 @@ $(document).ready(function() {
                     return;
                 }
                 
-                displayTeachersSchedule(data, teacherId);
+                if (isWeeklyView) {
+                    toggleWeeklyViewClass(true);
+                    displayWeeklySchedule(data, teacherId, 'teacher');
+                } else {
+                    toggleWeeklyViewClass(false);
+                    displayTeachersSchedule(data, teacherId);
+                }
                 showLoading(false, 'teachers');
             },
             error: function(xhr, status, error) {
@@ -696,6 +738,7 @@ $(document).ready(function() {
         const groupId = $('#selectedGroup').val();
         const fromDate = $('#groupsFromDate').val();
         const toDate = $('#groupsToDate').val();
+        const isWeeklyView = $('#groupsWeeklyToggle').is(':checked');
 
         if (!groupId || !fromDate || !toDate) {
             showError('Необхідно заповнити всі поля');
@@ -728,7 +771,13 @@ $(document).ready(function() {
                     return;
                 }
                 
-                displayGroupsSchedule(data, groupId);
+                if (isWeeklyView) {
+                    toggleWeeklyViewClass(true);
+                    displayWeeklySchedule(data, groupId, 'group');
+                } else {
+                    toggleWeeklyViewClass(false);
+                    displayGroupsSchedule(data, groupId);
+                }
                 showLoading(false, 'groups');
             },
             error: function(xhr, status, error) {
@@ -1393,5 +1442,204 @@ $(document).ready(function() {
             errorMessage = xhr.statusText;
         }
         return `${xhr.status} ${xhr.statusText}: ${errorMessage}`;
+    }
+
+    function getMonthIdFromDate(dateString) {
+        // Convert dd.MM.yyyy to month number (1-12)
+        const parts = dateString.split('.');
+        if (parts.length === 3) {
+            return parseInt(parts[1], 10);
+        }
+        return new Date().getMonth() + 1; // Default to current month
+    }
+
+    function displayWeeklySchedule(data, objectId, scheduleType) {
+        let $scheduleCard, $scheduleContent, $exportSection, objectName;
+        
+        // Determine which elements to use based on schedule type
+        if (scheduleType === 'teacher') {
+            $scheduleCard = $('#teachersScheduleCard');
+            $scheduleContent = $('#teachersScheduleContent');
+            $exportSection = $('#teachersExportSection');
+            objectName = getTeacherName(objectId);
+        } else if (scheduleType === 'room') {
+            $scheduleCard = $('#roomsScheduleCard');
+            $scheduleContent = $('#roomsScheduleContent');
+            $exportSection = $('#roomsExportSection');
+            objectName = getRoomName(objectId);
+        } else if (scheduleType === 'group') {
+            $scheduleCard = $('#groupsScheduleCard');
+            $scheduleContent = $('#groupsScheduleContent');
+            $exportSection = $('#groupsExportSection');
+            objectName = getGroupName(objectId);
+        }
+
+        // Hide export section for weekly view (can be added later if needed)
+        $exportSection.addClass('d-none');
+
+        // Display weekly schedule
+        if (data.psrozklad_export && data.psrozklad_export.roz_items && data.psrozklad_export.roz_items.length > 0) {
+            const groupedSchedule = groupScheduleByDate(data.psrozklad_export.roz_items);
+            const weeks = createWeeklyView(groupedSchedule);
+            
+            let scheduleHtml = `<h5 class="mb-3">Розклад для: ${objectName}</h5>`;
+            scheduleHtml += '<div class="weekly-view-container"><div class="weekly-view">';
+            
+            weeks.forEach(function(week) {
+                scheduleHtml += `
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Тиждень ${week.weekNumber} (${week.startDate} - ${week.endDate})</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                `;
+                
+                week.days.forEach(function(day) {
+                    scheduleHtml += `
+                        <div class="col-md-2 mb-3">
+                            <div class="card h-100 day-card">
+                                <div class="card-header text-center day-header">
+                                    <strong>${day.dayName}</strong><br>
+                                    <small>${day.date}</small>
+                                </div>
+                                <div class="card-body p-2">
+                    `;
+                    
+                    if (day.lessons && day.lessons.length > 0) {
+                        day.lessons.forEach(function(lesson) {
+                            scheduleHtml += `
+                                <div class="lesson-item">
+                                    <div class="lesson-time">${lesson.time}</div>
+                                    <div class="lesson-description">${lesson.description}</div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        scheduleHtml += '<div class="text-muted text-center small">Немає занять</div>';
+                    }
+                    
+                    scheduleHtml += `
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                scheduleHtml += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            scheduleHtml += '</div></div>'; // Close weekly-view and weekly-view-container divs
+            $scheduleContent.html(scheduleHtml);
+        } else {
+            $scheduleContent.html(`
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-calendar-x fs-1"></i>
+                    <p class="mt-3">На обраний період розклад не знайдено</p>
+                </div>
+            `);
+        }
+
+        $scheduleCard.removeClass('d-none');
+    }
+
+    function createWeeklyView(groupedSchedule) {
+        const weeks = [];
+        const sortedDates = Object.keys(groupedSchedule).sort(function(a, b) {
+            // Convert dd.MM.yyyy format to Date objects for proper sorting
+            const datePartsA = a.split('.');
+            const datePartsB = b.split('.');
+            const dateA = new Date(datePartsA[2], datePartsA[1] - 1, datePartsA[0]);
+            const dateB = new Date(datePartsB[2], datePartsB[1] - 1, datePartsB[0]);
+            return dateA - dateB;
+        });
+
+        if (sortedDates.length === 0) {
+            return weeks;
+        }
+
+        // Get the first date to determine the first Monday
+        const firstDateParts = sortedDates[0].split('.');
+        const firstDate = new Date(firstDateParts[2], firstDateParts[1] - 1, firstDateParts[0]);
+        const firstMonday = getWeekStart(firstDate);
+        
+        // Get the last date to determine the last Friday
+        const lastDateParts = sortedDates[sortedDates.length - 1].split('.');
+        const lastDate = new Date(lastDateParts[2], lastDateParts[1] - 1, lastDateParts[0]);
+        const lastFriday = getWeekEnd(getWeekStart(lastDate));
+
+        let currentWeekStart = new Date(firstMonday);
+        let weekNumber = 1;
+
+        while (currentWeekStart <= lastFriday) {
+            const weekEnd = new Date(currentWeekStart.getTime() + 4 * 24 * 60 * 60 * 1000); // Friday
+            
+            const week = {
+                weekNumber: weekNumber++,
+                startDate: formatDateForDisplay(currentWeekStart),
+                endDate: formatDateForDisplay(weekEnd),
+                days: []
+            };
+
+            // Add days for this week (Monday to Friday)
+            for (let i = 0; i < 5; i++) {
+                const dayDate = new Date(currentWeekStart.getTime() + i * 24 * 60 * 60 * 1000);
+                const dayString = formatDateForDisplay(dayDate);
+                
+                const day = {
+                    date: dayString,
+                    dayName: getDayName(dayDate.getDay()),
+                    lessons: []
+                };
+
+                // Find lessons for this day
+                const dayLessons = groupedSchedule[dayString] || [];
+                day.lessons = dayLessons.map(function(lesson) {
+                    return {
+                        time: lesson.lesson_time || '',
+                        description: lesson.lesson_description || ''
+                    };
+                }).sort(function(a, b) {
+                    return a.time.localeCompare(b.time);
+                });
+
+                week.days.push(day);
+            }
+
+            weeks.push(week);
+            currentWeekStart = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000); // Next week
+        }
+
+        return weeks;
+    }
+
+    function getWeekStart(date) {
+        const dayOfWeek = date.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Sunday = 0, Monday = 1
+        return new Date(date.getTime() + mondayOffset * 24 * 60 * 60 * 1000);
+    }
+
+    function getWeekEnd(weekStart) {
+        return new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    }
+
+    function formatDateForDisplay(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+    }
+
+    function toggleWeeklyViewClass(isWeeklyView) {
+        const $container = $('.container');
+        if (isWeeklyView) {
+            $container.addClass('weekly-view-active');
+        } else {
+            $container.removeClass('weekly-view-active');
+        }
     }
 }); 

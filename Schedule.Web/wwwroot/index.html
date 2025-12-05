@@ -92,7 +92,19 @@
                         <div class="col-12 mt-4">
                             <div class="card d-none" id="roomsScheduleCard">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-end mb-3">
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div class="btn-group" role="group" aria-label="View toggle">
+                                            <input type="radio" class="btn-check" name="roomsViewToggle" id="roomsListToggle" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary btn-sm" for="roomsListToggle">
+                                                <i class="bi bi-list-ul"></i> Список
+                                            </label>
+                                            
+                                            <input type="radio" class="btn-check" name="roomsViewToggle" id="roomsWeeklyToggle" autocomplete="off">
+                                            <label class="btn btn-outline-primary btn-sm" for="roomsWeeklyToggle">
+                                                <i class="bi bi-calendar-week"></i> Тиждень
+                                            </label>
+                                        </div>
+                                        
                                         <div id="roomsExportSection" class="d-none">
                                             <a href="#" id="roomsExportLink" class="btn btn-outline-success btn-sm" target="_blank">
                                                 <i class="bi bi-download"></i> Експорт iCal
@@ -161,7 +173,19 @@
                         <div class="col-12 mt-4">
                             <div class="card d-none" id="teachersScheduleCard">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-end mb-3">
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div class="btn-group" role="group" aria-label="View toggle">
+                                            <input type="radio" class="btn-check" name="teachersViewToggle" id="teachersListToggle" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary btn-sm" for="teachersListToggle">
+                                                <i class="bi bi-list-ul"></i> Список
+                                            </label>
+                                            
+                                            <input type="radio" class="btn-check" name="teachersViewToggle" id="teachersWeeklyToggle" autocomplete="off">
+                                            <label class="btn btn-outline-primary btn-sm" for="teachersWeeklyToggle">
+                                                <i class="bi bi-calendar-week"></i> Тиждень
+                                            </label>
+                                        </div>
+                                        
                                         <div id="teachersExportSection" class="d-none">
                                             <a href="#" id="teachersExportLink" class="btn btn-outline-success btn-sm" target="_blank">
                                                 <i class="bi bi-download"></i> Експорт iCal
@@ -230,7 +254,19 @@
                         <div class="col-12 mt-4">
                             <div class="card d-none" id="groupsScheduleCard">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-end mb-3">
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div class="btn-group" role="group" aria-label="View toggle">
+                                            <input type="radio" class="btn-check" name="groupsViewToggle" id="groupsListToggle" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary btn-sm" for="groupsListToggle">
+                                                <i class="bi bi-list-ul"></i> Список
+                                            </label>
+                                            
+                                            <input type="radio" class="btn-check" name="groupsViewToggle" id="groupsWeeklyToggle" autocomplete="off">
+                                            <label class="btn btn-outline-primary btn-sm" for="groupsWeeklyToggle">
+                                                <i class="bi bi-calendar-week"></i> Тиждень
+                                            </label>
+                                        </div>
+                                        
                                         <div id="groupsExportSection" class="d-none">
                                             <a href="#" id="groupsExportLink" class="btn btn-outline-success btn-sm" target="_blank">
                                                 <i class="bi bi-download"></i> Експорт iCal
