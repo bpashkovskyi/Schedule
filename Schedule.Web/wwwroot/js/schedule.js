@@ -178,13 +178,21 @@ $(document).ready(function() {
     }
 
     function populateBlocks() {
-        const $blockSelect = $('#selectedBlock');
-        $blockSelect.empty();
-        $blockSelect.append('<option value="">Оберіть корпус</option>');
-        
-        blocks.forEach(function(block) {
-            $blockSelect.append(`<option value="${block.name}">${block.name}</option>`);
-        });
+        const fillSelect = function($select) {
+            if (!$select || $select.length === 0) {
+                return;
+            }
+
+            $select.empty();
+            $select.append('<option value="">Оберіть корпус</option>');
+
+            blocks.forEach(function(block) {
+                $select.append(`<option value="${block.name}">${block.name}</option>`);
+            });
+        };
+
+        fillSelect($('#selectedBlock'));
+        fillSelect($('#auditoriumsSelectedBlock'));
     }
 
     function populateDepartments() {
@@ -269,14 +277,32 @@ $(document).ready(function() {
                 </option>
             `);
         });
+
+        // Populate for auditoriums load
+        const $auditoriumsPeriodSelect = $('#auditoriumsSelectedPeriod');
+        $auditoriumsPeriodSelect.empty();
+
+        periodOptions.forEach(function(period) {
+            $auditoriumsPeriodSelect.append(`
+                <option value="${period.value}" 
+                        data-from="${period.fromDate}" 
+                        data-to="${period.toDate}">
+                    ${period.label}
+                </option>
+            `);
+        });
         
         // Set default selection for all
         $periodSelect.val('to_end_of_week');
         $teachersPeriodSelect.val('to_end_of_week');
         $groupsPeriodSelect.val('to_end_of_week');
         $teachingLoadPeriodSelect.val('to_end_of_week');
+        $auditoriumsPeriodSelect.val('to_end_of_week');
         updateDateFields();
         toggleDateInputs();
+
+        updateAuditoriumsDateFields();
+        toggleAuditoriumsDateInputs();
     }
 
     function setupEventHandlers() {
@@ -334,6 +360,12 @@ $(document).ready(function() {
             toggleTeachingLoadDateInputs();
         });
 
+        // Period selection change for auditoriums load
+        $('#auditoriumsSelectedPeriod').on('change', function() {
+            updateAuditoriumsDateFields();
+            toggleAuditoriumsDateInputs();
+        });
+
         // Form submissions
         $('#roomsScheduleForm').on('submit', function(e) {
             e.preventDefault();
@@ -353,6 +385,11 @@ $(document).ready(function() {
         $('#teachingLoadForm').on('submit', function(e) {
             e.preventDefault();
             searchTeachingLoad();
+        });
+
+        $('#auditoriumsLoadForm').on('submit', function(e) {
+            e.preventDefault();
+            searchAuditoriumsLoad();
         });
 
         // View toggles for all tabs
@@ -522,6 +559,48 @@ $(document).ready(function() {
                 window.toDatePicker.enable();
             } else {
                 window.toDatePicker.disable();
+            }
+        }
+    }
+
+    function updateAuditoriumsDateFields() {
+        const selectedPeriod = $('#auditoriumsSelectedPeriod option:selected');
+        const fromDate = selectedPeriod.data('from');
+        const toDate = selectedPeriod.data('to');
+
+        if (fromDate && toDate) {
+            $('#auditoriumsFromDate').val(fromDate);
+            $('#auditoriumsToDate').val(toDate);
+
+            if (window.auditoriumsFromDatePicker) {
+                window.auditoriumsFromDatePicker.setDate(fromDate, false, 'd.m.Y');
+            }
+            if (window.auditoriumsToDatePicker) {
+                window.auditoriumsToDatePicker.setDate(toDate, false, 'd.m.Y');
+            }
+        }
+    }
+
+    function toggleAuditoriumsDateInputs() {
+        const selectedPeriod = $('#auditoriumsSelectedPeriod').val();
+        const isCustomPeriod = selectedPeriod === 'custom';
+
+        $('#auditoriumsFromDate').prop('disabled', !isCustomPeriod);
+        $('#auditoriumsToDate').prop('disabled', !isCustomPeriod);
+
+        if (window.auditoriumsFromDatePicker) {
+            if (isCustomPeriod) {
+                window.auditoriumsFromDatePicker.enable();
+            } else {
+                window.auditoriumsFromDatePicker.disable();
+            }
+        }
+
+        if (window.auditoriumsToDatePicker) {
+            if (isCustomPeriod) {
+                window.auditoriumsToDatePicker.enable();
+            } else {
+                window.auditoriumsToDatePicker.disable();
             }
         }
     }
@@ -851,6 +930,282 @@ $(document).ready(function() {
             });
     }
 
+    async function searchAuditoriumsLoad() {
+        const selectedBlockName = $('#auditoriumsSelectedBlock').val();
+        const fromDateStr = $('#auditoriumsFromDate').val();
+        const toDateStr = $('#auditoriumsToDate').val();
+        const pairsFrom = parseInt($('#auditoriumsPairsFrom').val(), 10);
+        const pairsTo = parseInt($('#auditoriumsPairsTo').val(), 10);
+
+        if (!selectedBlockName || !fromDateStr || !toDateStr) {
+            showError('Необхідно заповнити всі поля');
+            return;
+        }
+
+        if (Number.isNaN(pairsFrom) || Number.isNaN(pairsTo) || pairsFrom < 1 || pairsTo < 1) {
+            showError('Діапазон пар некоректний');
+            return;
+        }
+
+        if (pairsFrom > pairsTo) {
+            showError('Пари “від” не можуть бути більшими за “до”');
+            return;
+        }
+
+        if (!Array.isArray(blocks) || blocks.length === 0) {
+            showError('Корпуси ще не завантажені. Спробуй ще раз через кілька секунд.');
+            return;
+        }
+
+        const block = blocks.find(b => b.name === selectedBlockName);
+        if (!block || !Array.isArray(block.objects) || block.objects.length === 0) {
+            showError('Корпус не знайдено або в ньому немає аудиторій');
+            return;
+        }
+
+        const workingDays = countWorkingDays(fromDateStr, toDateStr);
+        if (workingDays <= 0) {
+            showError('На обраний період немає робочих днів (пн-пт)');
+            return;
+        }
+
+        const pairCount = pairsTo - pairsFrom + 1;
+        const possiblePairs = workingDays * pairCount;
+
+        $('#auditoriumsLoadSummary').text(
+            `Робочих днів: ${workingDays}. Пари: ${pairsFrom}-${pairsTo}. Можливо пар у кожній аудиторії: ${possiblePairs}.`
+        );
+        $('#auditoriumsLoadCard').removeClass('d-none');
+        $('#auditoriumsLoadContent').html(`
+            <div class="text-center text-muted py-5">
+                <div class="spinner-border" role="status" aria-hidden="true"></div>
+                <p class="mt-3">Порахувати завантаження для аудиторій...</p>
+            </div>
+        `);
+
+        showLoading(true, 'auditoriumsLoad');
+
+        const rooms = block.objects
+            .filter(r => r && r.ID)
+            .map(r => ({
+                id: r.ID,
+                name: r.name || 'Невідома аудиторія'
+            }));
+
+        const fromDateAPI = convertDateForAPI(fromDateStr);
+        const toDateAPI = convertDateForAPI(toDateStr);
+
+        const cache = new Map();
+        const results = [];
+        let errorCount = 0;
+
+        async function fetchRoomSchedule(roomId) {
+            const cached = cache.get(roomId);
+            if (cached) {
+                return cached;
+            }
+
+            const queryString = `req_type=rozklad&req_mode=room&OBJ_ID=${roomId}&OBJ_name=&dep_name=&ros_text=united&begin_date=${fromDateAPI}&end_date=${toDateAPI}&req_format=json&coding_mode=UTF8&bs=ok`;
+            const promise = $.ajax({
+                url: '/api/schedule/proxy',
+                method: 'GET',
+                data: { q: queryString }
+            });
+
+            cache.set(roomId, promise);
+            return promise;
+        }
+
+        async function worker() {
+            while (true) {
+                if (rooms.length === 0) {
+                    return;
+                }
+
+                const idx = worker.nextIndex;
+                worker.nextIndex += 1;
+                if (idx >= rooms.length) {
+                    return;
+                }
+
+                const room = rooms[idx];
+                try {
+                    const data = await fetchRoomSchedule(room.id);
+                    const rozItems = data?.psrozklad_export?.roz_items;
+                    const actualPairs = countActualPairs(rozItems, pairsFrom, pairsTo);
+
+                    const percent = possiblePairs > 0 ? (actualPairs / possiblePairs) * 100 : 0;
+                    results.push({
+                        roomId: room.id,
+                        roomName: room.name,
+                        percent,
+                        actualPairs,
+                        possiblePairs
+                    });
+                } catch (e) {
+                    errorCount++;
+                    console.error('Auditoriums load error:', e);
+                    results.push({
+                        roomId: room.id,
+                        roomName: room.name,
+                        percent: 0,
+                        actualPairs: 0,
+                        possiblePairs
+                    });
+                }
+            }
+        }
+
+        worker.nextIndex = 0;
+        const concurrency = 4;
+        try {
+            const workers = [];
+            for (let i = 0; i < concurrency; i++) {
+                workers.push(worker());
+            }
+            await Promise.all(workers);
+        } finally {
+            showLoading(false, 'auditoriumsLoad');
+        }
+
+        results.sort(function(a, b) {
+            return b.percent - a.percent;
+        });
+
+        renderAuditoriumsLoad(results);
+
+        if (errorCount > 0) {
+            showError(`Не вдалося завантажити розклад для ${errorCount} аудиторій. Вони показані як 0%.`);
+        }
+    }
+
+    function parseUkDateToDateObject(dateStr) {
+        // Expected format: dd.MM.yyyy
+        const parts = dateStr.split('.');
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year)) {
+            return null;
+        }
+
+        return new Date(year, month - 1, day);
+    }
+
+    function countWorkingDays(fromDateStr, toDateStr) {
+        const fromDate = parseUkDateToDateObject(fromDateStr);
+        const toDate = parseUkDateToDateObject(toDateStr);
+        if (fromDate === null || toDate === null) {
+            return 0;
+        }
+
+        if (fromDate.getTime() > toDate.getTime()) {
+            return 0;
+        }
+
+        let count = 0;
+        const cursor = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+        const end = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+
+        while (cursor.getTime() <= end.getTime()) {
+            const dayOfWeek = cursor.getDay(); // 0=Sun, 6=Sat
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                count++;
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        return count;
+    }
+
+    function countActualPairs(rozItems, pairsFrom, pairsTo) {
+        if (!Array.isArray(rozItems) || rozItems.length === 0) {
+            return 0;
+        }
+
+        // Avoid double-counting if the API returns multiple rows for the same pair slot.
+        const usedPairSlots = new Set();
+
+        rozItems.forEach(function(item) {
+            const date = item?.date;
+            const lessonNumber = parseInt(item?.lesson_number, 10);
+            const lessonDescription = item?.lesson_description;
+            if (!date || Number.isNaN(lessonNumber)) {
+                return;
+            }
+
+            const isLessonFilled = typeof lessonDescription === 'string' && lessonDescription.trim().length > 0;
+            if (!isLessonFilled) {
+                return;
+            }
+
+            if (lessonNumber >= pairsFrom && lessonNumber <= pairsTo) {
+                usedPairSlots.add(`${date}|${lessonNumber}`);
+            }
+        });
+
+        return usedPairSlots.size;
+    }
+
+    function getHeatColor(percent) {
+        // Low -> green/amber; high -> red
+        if (percent <= 25) {
+            return '#20c997';
+        }
+        if (percent <= 50) {
+            return '#ffc107';
+        }
+        if (percent <= 75) {
+            return '#fd7e14';
+        }
+        return '#dc3545';
+    }
+
+    function renderAuditoriumsLoad(results) {
+        const $content = $('#auditoriumsLoadContent');
+        $content.empty();
+
+        if (!Array.isArray(results) || results.length === 0) {
+            $content.html(`
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-calendar-x fs-1"></i>
+                    <p class="mt-3">На обраний період розклад не знайдено</p>
+                </div>
+            `);
+            return;
+        }
+
+        results.forEach(function(r) {
+            const percent = Math.min(100, Math.max(0, r.percent || 0));
+            const color = getHeatColor(percent);
+            const percentText = percent.toFixed(1) + '%';
+            const actualText = `${r.actualPairs}/${r.possiblePairs}`;
+
+            $content.append(`
+                <div class="auditorium-load-item card shadow-none">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="fw-bold">${r.roomName}</div>
+                        <div class="text-end">
+                            <div class="fw-bold" style="color: ${color};">${percentText}</div>
+                            <small class="text-muted">${actualText} пар</small>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div class="progress" style="height: 14px;">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: ${percent}%; background-color: ${color};"
+                                 aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+
     function formatDateForAPI(date) {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -934,6 +1289,21 @@ $(document).ready(function() {
             onChange: function(selectedDates, dateStr) {
                 // Ensure the input shows the correct format
                 $('#teachingLoadToDate').val(dateStr);
+            }
+        });
+
+        // Auditorium load date pickers
+        window.auditoriumsFromDatePicker = flatpickr('#auditoriumsFromDate', {
+            ...datePickerConfig,
+            onChange: function(selectedDates, dateStr) {
+                $('#auditoriumsFromDate').val(dateStr);
+            }
+        });
+
+        window.auditoriumsToDatePicker = flatpickr('#auditoriumsToDate', {
+            ...datePickerConfig,
+            onChange: function(selectedDates, dateStr) {
+                $('#auditoriumsToDate').val(dateStr);
             }
         });
     }
@@ -1357,7 +1727,7 @@ $(document).ready(function() {
             };
         } else {
             return {
-                start: new Date(date.getFullYear(), 1, 20), // February 20
+                start: new Date(date.getFullYear(), 1, 2), // February 2
                 end: new Date(date.getFullYear(), 5, 30)    // June 30
             };
         }
@@ -1378,6 +1748,9 @@ $(document).ready(function() {
         } else if (type === 'teachingLoad') {
             $spinner = $('#searchTeachingLoadBtn .spinner-border');
             $button = $('#searchTeachingLoadBtn');
+        } else if (type === 'auditoriumsLoad') {
+            $spinner = $('#searchAuditoriumsLoadBtn .spinner-border');
+            $button = $('#searchAuditoriumsLoadBtn');
         }
         
         $buttonText = $button.contents().filter(function() {
@@ -1392,6 +1765,8 @@ $(document).ready(function() {
             $spinner.addClass('d-none');
             if (type === 'teachingLoad') {
                 $buttonText.text('Розрахувати навантаження');
+            } else if (type === 'auditoriumsLoad') {
+                $buttonText.text('Порахувати завантаження');
             } else {
                 $buttonText.text('Знайти розклад');
             }

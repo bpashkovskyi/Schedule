@@ -351,6 +351,15 @@ body {
     border-radius: 8px;
 }
 
+/* Auditorium load: tighter layout so filters fit better */
+.auditoriums-load-form-row {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.auditoriums-pairs-group {
+    max-width: 150px;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
@@ -821,3 +830,9 @@ body {
         font-size: 0.8rem;
     }
 } 
+
+/* Auditorium load */
+.auditorium-load-item {
+    padding: 14px 16px;
+    margin-bottom: 0 !important;
+}
