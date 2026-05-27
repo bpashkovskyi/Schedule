@@ -1,44 +1,32 @@
-var builder = WebApplication.CreateBuilder(args);
+using Dekanat.ScheduleSdk.DependencyInjection;
+using Schedule.Web.Services;
 
-// Add services to the container.
-builder.Services.AddControllers();
-builder.Services.AddHttpClient();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add Swagger/OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddControllersWithViews();
+builder.Services.AddPsRozkladClient();
 
-// Add CORS for static files
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
+builder.Services.AddHttpClient<ITimetableSuggestionsService, TimetableSuggestionsService>();
+builder.Services.AddSingleton<PeriodOptionsProvider>();
+builder.Services.AddScoped<IScheduleReferenceService, ScheduleReferenceService>();
+builder.Services.AddScoped<IScheduleQueryService, ScheduleQueryService>();
+builder.Services.AddScoped<IAuditoriumLoadService, AuditoriumLoadService>();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI();
-
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/error");
+    app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
 
-app.UseCors();
+app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Serve index.html for the root path
-app.MapFallbackToFile("index.html");
-
-app.Run(); 
+app.Run();

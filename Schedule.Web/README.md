@@ -1,60 +1,37 @@
 # Розклад занять
 
-Сучасний додаток для перегляду розкладу занять університету з jQuery фронтендом та ASP.NET Core Web API бекендом.
+Додаток для перегляду розкладу занять НУНГ на **ASP.NET Core MVC** з інтеграцією [Dekanat.ScheduleSdk](https://www.nuget.org/packages/Dekanat.ScheduleSdk).
 
 ## Функції
 
-- **Перегляд розкладу**: Пошук та відображення розкладу для аудиторій
-- **Вибір періоду**: Попередньо визначені періоди (тиждень, місяць, семестр)
-- **Адаптивний дизайн**: Працює на десктопі, планшеті та мобільних
-- **Експорт**: Завантаження розкладу в форматі iCal
-- **Обробка помилок**: Детальні повідомлення про помилки API
+- Розклад за факультетом / викладачем / групою
+- Розклад аудиторій, груп, викладачів
+- Завантаження аудиторій та навчальне навантаження
+- Список і тижневий вигляд
+- Експорт iCal
 
 ## Технології
 
-### Фронтенд
-- jQuery, Bootstrap 5, HTML5
-
-### Бекенд
-- ASP.NET Core 8, C# 12, HttpClient
+- ASP.NET Core MVC (.NET 10)
+- [Dekanat.ScheduleSdk](https://www.nuget.org/packages/Dekanat.ScheduleSdk) — API ПС-Розклад
+- Bootstrap 5
 
 ## Запуск
 
-1. **Встановіть .NET 8 SDK**
-2. **Клонуйте репозиторій**
-3. **Запустіть додаток:**
-   ```bash
-   dotnet run
-   ```
-4. **Відкрийте браузер:** `https://localhost:5001`
+```bash
+cd Schedule.Web
+dotnet run
+```
 
-## Використання
-
-1. Оберіть корпус
-2. Оберіть аудиторію
-3. Виберіть період
-4. Натисніть "Знайти розклад"
-5. Експортуйте в iCal при потребі
-
-## API
-
-Додаток працює як проксі до зовнішнього API:
-- **Базовий URL**: `https://dekanat.nung.edu.ua/cgi-bin/timetable_export.cgi`
-- **Формат дат**: `dd.MM.yyyy`
-- **Ендпоінт**: `GET /api/schedule/proxy?q={queryString}`
+Відкрийте URL з `launchSettings.json` (зазвичай `https://localhost:7xxx`).
 
 ## Структура
 
 ```
-Schedule/
-├── Controllers/Api/     # Web API контролери
-├── wwwroot/            # Статичні файли
-│   ├── index.html     # Головна сторінка
-│   ├── css/site.css   # Стилі
-│   └── js/schedule.js # jQuery логіка
-└── Program.cs          # Конфігурація додатку
+Schedule.Web/
+├── Controllers/HomeController.cs
+├── Services/              # робота з SDK та підказками timetable.cgi
+├── ViewModels/
+├── Views/Home/Index.cshtml
+└── wwwroot/css, js
 ```
-
-## Ліцензія
-
-Проект для освітніх та внутрішніх цілей. 

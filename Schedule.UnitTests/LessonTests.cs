@@ -33,19 +33,17 @@ public sealed class LessonTests
     }
 
     [Fact]
-    public void Constructor_WithNullData_ShouldSetPropertiesToNull()
+    public void Constructor_WithDefaultValues_ShouldSetEmptyStrings()
     {
-        // Arrange
-        var lesson = new Lesson();
+        Lesson lesson = new();
 
-        // Assert
-        lesson.Object.Should().BeNull();
-        lesson.Date.Should().BeNull();
-        lesson.Comment.Should().BeNull();
-        lesson.LessonNumber.Should().BeNull();
-        lesson.LessonName.Should().BeNull();
-        lesson.LessonTime.Should().BeNull();
-        lesson.LessonDescription.Should().BeNull();
+        lesson.Object.Should().BeEmpty();
+        lesson.Date.Should().BeEmpty();
+        lesson.Comment.Should().BeEmpty();
+        lesson.LessonNumber.Should().BeEmpty();
+        lesson.LessonName.Should().BeEmpty();
+        lesson.LessonTime.Should().BeEmpty();
+        lesson.LessonDescription.Should().BeEmpty();
     }
 
     [Theory]

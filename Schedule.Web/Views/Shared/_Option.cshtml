@@ -1,0 +1,9 @@
+@model (string Value, string Text, bool Selected)
+@if (Model.Selected)
+{
+    <option value="@Model.Value" selected="selected">@Model.Text</option>
+}
+else
+{
+    <option value="@Model.Value">@Model.Text</option>
+}

@@ -1,0 +1,51 @@
+@model KeyValuePair<string, IReadOnlyList<ScheduleItemVm>>
+@{
+    DateOnly? date = ScheduleDateExtensions.ParseApiDate(Model.Key);
+    string dayName = date?.DayOfWeek switch
+    {
+        DayOfWeek.Monday => "Понеділок",
+        DayOfWeek.Tuesday => "Вівторок",
+        DayOfWeek.Wednesday => "Середа",
+        DayOfWeek.Thursday => "Четвер",
+        DayOfWeek.Friday => "П'ятниця",
+        DayOfWeek.Saturday => "Субота",
+        DayOfWeek.Sunday => "Неділя",
+        _ => ""
+    };
+}
+
+<div class="card h-100">
+    <div class="card-header">
+        <strong>@dayName, @Model.Key</strong>
+    </div>
+    <div class="card-body">
+        @if (Model.Value.Count == 0)
+        {
+            <div class="text-muted">Розклад відсутній</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th style="width:10%">№</th>
+                            <th style="width:15%">Час</th>
+                            <th style="width:75%">Заняття</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (ScheduleItemVm item in Model.Value)
+                        {
+                            <tr>
+                                <td class="text-center fw-bold">@item.LessonNumber</td>
+                                <td class="text-primary fw-bold">@item.LessonTime</td>
+                                <td>@item.LessonDescription</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

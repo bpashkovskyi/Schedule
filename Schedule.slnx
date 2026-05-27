@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Schedule.UnitTests/Schedule.UnitTests.csproj" />
+  <Project Path="Schedule.Web/Schedule.Web.csproj" />
+</Solution>

@@ -1,0 +1,40 @@
+@model DateRangeFormVm
+@{
+    string prefix = ViewData["Prefix"] as string ?? "";
+    string periodId = ViewData["PeriodId"] as string ?? prefix + "Period";
+    string fromId = ViewData["FromId"] as string ?? prefix + "From";
+    string toId = ViewData["ToId"] as string ?? prefix + "To";
+    var options = (IReadOnlyList<PeriodOptionVm>)ViewData["PeriodOptions"]!;
+    bool isCustom = Model.PeriodKey == "custom";
+}
+
+<div class="form-group mb-3">
+    <label class="form-label" for="@periodId">Період</label>
+    <select class="form-select" id="@periodId" name="PeriodKey">
+        @foreach (PeriodOptionVm opt in options)
+        {
+            if (Model.PeriodKey == opt.Key)
+            {
+                <option value="@opt.Key" selected="selected"
+                        data-from="@opt.FromDate.ToString("yyyy-MM-dd")"
+                        data-to="@opt.ToDate.ToString("yyyy-MM-dd")">@opt.Label</option>
+            }
+            else
+            {
+                <option value="@opt.Key"
+                        data-from="@opt.FromDate.ToString("yyyy-MM-dd")"
+                        data-to="@opt.ToDate.ToString("yyyy-MM-dd")">@opt.Label</option>
+            }
+        }
+    </select>
+</div>
+<div class="form-group mb-3">
+    <label class="form-label" for="@fromId">Від дати</label>
+    <input type="date" class="form-control" id="@fromId" name="FromDate"
+           value="@Model.FromDate?.ToString("yyyy-MM-dd")" @(isCustom ? "" : "disabled") required />
+</div>
+<div class="form-group mb-3">
+    <label class="form-label" for="@toId">До дати</label>
+    <input type="date" class="form-control" id="@toId" name="ToDate"
+           value="@Model.ToDate?.ToString("yyyy-MM-dd")" @(isCustom ? "" : "disabled") required />
+</div>
